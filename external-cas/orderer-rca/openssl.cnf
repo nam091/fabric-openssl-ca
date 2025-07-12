@@ -1,0 +1,55 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir               = .
+certs             = $dir/certs
+crl_dir           = $dir/crl
+new_certs_dir     = $dir/newcerts
+database          = $dir/index.txt
+serial            = $dir/serial
+crlnumber         = $dir/crlnumber
+private_key       = $dir/private/ca.key
+certificate       = $dir/certs/ca.crt
+default_days      = 365
+default_crl_days  = 30
+default_md        = sha256
+policy            = policy_match
+
+[ policy_match ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+
+[ req ]
+default_bits        = 2048
+prompt              = no
+default_md          = sha256
+distinguished_name  = req_distinguished_name
+
+[ req_distinguished_name ]
+# Sẽ được ghi đè bởi cờ -subj
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ v3_peer ]
+basicConstraints = CA:FALSE
+nsCertType = server
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature
+extendedKeyUsage = serverAuth
+
+[ v3_user ]
+basicConstraints = CA:FALSE
+nsCertType = client
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature
+extendedKeyUsage = clientAuth

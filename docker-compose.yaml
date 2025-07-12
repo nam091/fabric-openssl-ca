@@ -1,0 +1,99 @@
+version: '3.7'
+networks:
+  smartbank_net:
+    name: smartbank-fabric_smartbank_net
+services:
+  orderer.example.com:
+    image: hyperledger/fabric-orderer:2.4.9
+    container_name: orderer.example.com
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=ordererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=false
+    command: orderer
+    ports:
+      - "7050:7050"
+    volumes:
+      - ./config/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp:/var/hyperledger/orderer/msp
+    networks:
+      - smartbank_net
+  peer0.smartbanka.com:
+    image: hyperledger/fabric-peer:2.4.9
+    container_name: peer0.smartbanka.com
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.smartbanka.com
+      - CORE_PEER_ADDRESS=peer0.smartbanka.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.smartbanka.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.smartbanka.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.smartbanka.com:7051
+      - CORE_PEER_LOCALMSPID=smartbankaMSP
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=smartbank-fabric_smartbank_net
+    ports:
+      - "7051:7051"
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./crypto-config/peerOrganizations/smartbanka.com/peers/peer0.smartbanka.com/msp:/etc/hyperledger/fabric/msp
+    networks:
+      - smartbank_net
+
+  # === PHẦN SỬA LỖI CHO SMARTBANKB ===
+  peer0.smartbankb.com:
+    image: hyperledger/fabric-peer:2.4.9
+    container_name: peer0.smartbankb.com
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.smartbankb.com
+      - CORE_PEER_ADDRESS=peer0.smartbankb.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051  # <-- SỬA TỪ 7051 THÀNH 8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.smartbankb.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.smartbankb.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.smartbankb.com:8051
+      - CORE_PEER_LOCALMSPID=smartbankbMSP
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=smartbank-fabric_smartbank_net
+    ports:
+      - "8051:8051" # <-- SỬA TỪ 7051 THÀNH 8051
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./crypto-config/peerOrganizations/smartbankb.com/peers/peer0.smartbankb.com/msp:/etc/hyperledger/fabric/msp
+    networks:
+      - smartbank_net
+
+  cli:
+    image: hyperledger/fabric-tools:2.4.9
+    container_name: cli
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.smartbanka.com:7051
+      - CORE_PEER_LOCALMSPID=smartbankaMSP
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_PEER_MSPCONFIGPATH=/opt/crypto/peerOrganizations/smartbanka.com/users/Admin@smartbanka.com/msp
+    command: /bin/bash
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./crypto-config:/opt/crypto
+      - ./config:/opt/channel-artifacts
+      - ./chaincode:/opt/gopath/src/chaincode
+    networks:
+      - smartbank_net
+    depends_on:
+      - orderer.example.com
+      - peer0.smartbanka.com
+      - peer0.smartbankb.com
